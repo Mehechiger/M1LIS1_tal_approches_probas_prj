@@ -1,0 +1,63 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import os
+from scipy.stats import anderson, boxcox
+from s0_load_scr import load_scr
+
+metrics = ["da", "bleu", "terp"]
+directions = ["forward", "reverse"]
+lang_pairs = ["en_ru", "ru_en", "fi_en", "cs_en", "ro_en", "de_en", "tr_en"]
+input_ = "/Users/mehec/nlp/approbas/prj/scores/"
+output_direction = "/Users/mehec/nlp/approbas/prj/analysis/a1b_is_norm_direction_level/"
+output_langpair = "/Users/mehec/nlp/approbas/prj/analysis/a1b_is_norm_langpair_level/"
+
+if not os.path.isdir(output_direction):
+    os.makedirs(output_direction)
+if not os.path.isdir(output_langpair):
+    os.makedirs(output_langpair)
+
+res_metric = []
+
+for metric in metrics:
+    df = load_scr("%s%s..seg.scr" % (input_, metric))
+
+    for direction in directions:
+        slc = df[df.direction == direction].score
+        plt.title('%s %s hist' % (metric, direction))
+        plt.xlabel('%s score' % metric)
+        plt.ylabel('count')
+        boxcoxed = pd.DataFrame(
+            boxcox(slc-min(slc)+1e-100)[0], columns=["boxcoxed"])
+        boxcoxed.hist(bins=50)
+        plt.savefig("%s%s_%s_hist.jpg" % (output_direction, metric, direction))
+        plt.clf()
+
+        statistic, critical_values, significance_level = anderson(slc)
+        res_metric.append({"metric": metric, "direction": direction, "anderson_statistic": statistic,
+                           "anderson_critical_values": critical_values, "anderson_significance_level": significance_level})
+
+pd.DataFrame(res_metric).to_csv("%sis_norm.csv" % output_direction)
+
+
+for lang_pair in lang_pairs:
+    res_langpair = []
+
+    for metric in metrics:
+        df = load_scr("%s%s..seg.scr" % (input_, metric))
+
+        for direction in directions:
+            slc = df[df.lang_pair == lang_pair][df.direction == direction].score
+            plt.title('%s %s %s hist' % (lang_pair, metric, direction))
+            plt.xlabel('%s %s score' % (lang_pair, metric))
+            plt.ylabel('count')
+            slc.hist(bins=50).get_figure().savefig("%s%s_%s_%s_hist.jpg" %
+                                                   (output_langpair, lang_pair, metric, direction))
+            plt.clf()
+
+            statistic, critical_values, significance_level = anderson(slc)
+            res_langpair.append({"metric": metric, "direction": direction, "lang_pair": lang_pair, "anderson_statistic": statistic,
+                                 "anderson_critical_values": critical_values, "anderson_significance_level": significance_level})
+
+    pd.DataFrame(res_langpair).to_csv("%s%s_is_norm.csv" %
+                                      (output_langpair, lang_pair))
