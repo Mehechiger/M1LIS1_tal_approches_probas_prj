@@ -3,11 +3,11 @@ import os
 import shutil
 from subprocess import Popen, PIPE
 
-input_ = "/Users/mehec/nlp/approbas/prj/data/data_regen.json"
-temp = "/Users/mehec/nlp/approbas/prj/scores/temp/"
-output = "/Users/mehec/nlp/approbas/prj/scores/"
-terp = "/Users/mehec/nlp/approbas/prj/terp-master/bin/"
-terp_ph_db = "/Users/mehec/nlp/approbas/prj/terp-master/data/phrases.db"
+input_ = "../data/data_regen.json"
+temp = "../scores/temp/"
+output = "../scores/"
+terp = "../terp-master/bin/"
+terp_ph_db = "../terp-master/data/phrases.db"
 output_fm = "param nist"
 modes_terp = ["p", "pa", "p_ter"]
 

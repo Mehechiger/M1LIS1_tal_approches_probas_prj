@@ -2,8 +2,8 @@ import json
 import re
 from nltk.translate.bleu_score import sentence_bleu, corpus_bleu
 
-input_ = "/Users/mehec/nlp/approbas/prj/data/data_regen.json"
-output = "/Users/mehec/nlp/approbas/prj/scores/"
+input_ = "../data/data_regen.json"
+output = "../scores/"
 
 with open(input_, "r") as f:
     data_regen = json.load(f)

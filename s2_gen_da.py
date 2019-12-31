@@ -1,8 +1,8 @@
 import json
 import os
 
-input_ = "/Users/mehec/nlp/approbas/prj/data/data_regen.json"
-output = "/Users/mehec/nlp/approbas/prj/scores/"
+input_ = "../data/data_regen.json"
+output = "../scores/"
 
 if not os.path.isdir(output):
     os.makedirs(output)

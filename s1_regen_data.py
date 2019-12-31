@@ -1,8 +1,8 @@
 import json
 from collections import defaultdict
 
-input_ = "/Users/mehec/nlp/approbas/prj/data/da_newstest2016.json"
-output = "/Users/mehec/nlp/approbas/prj/data/"
+input_ = "../data/da_newstest2016.json"
+output = "../data/"
 
 with open(input_, "r")as f:
     data = json.load(f)
