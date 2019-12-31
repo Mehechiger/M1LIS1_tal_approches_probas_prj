@@ -9,7 +9,7 @@ output = "../scores/"
 terp = "../terp-master/bin/"
 terp_ph_db = "../terp-master/data/phrases.db"
 output_fm = "param nist"
-modes_terp = ["p", "pa", "p_ter"]
+modes_terp = ["p", ]
 
 if not os.path.isdir(temp):
     os.makedirs(temp)

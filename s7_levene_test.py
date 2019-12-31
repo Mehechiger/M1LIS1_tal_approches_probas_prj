@@ -4,12 +4,13 @@ import os
 from scipy.stats import levene
 from s0_load_scr import load_scr
 
-metrics = ["da", "bleu", "terp"]
+input_ = "../scores/"
+output = "../analysis/"
+
+metrics = set(d.split(".")[0] for d in os.listdir(input_) if d[-4:] == ".scr")
 directions = ["forward", "reverse"]
 lang_pairs = ["en_ru", "ru_en", "fi_en", "cs_en", "ro_en", "de_en", "tr_en"]
 cents = {"da": "median", "bleu": "trimmed", "terp": "median"}
-input_ = "../scores/"
-output = "../analysis/"
 
 if not os.path.isdir(output):
     os.makedirs(output)
