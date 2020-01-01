@@ -19,7 +19,7 @@ params = ["Reference File (filename) : ",
 param_values = ["%srefs.trans" % temp,
                 "%shyps.trans" % temp,
                 terp_ph_db,
-                "0.0",
+                "10.0",
                 "param nist",
                 "%ster" % output
                 ]
@@ -48,7 +48,7 @@ param = "\n".join("%s%s" % (params[i], param_values[i])
 
 for mode_terp in modes_terp:
     with open("%ster%s.param" % (temp, mode_terp), "w") as f:
-        f.write("%s%s_freeshift." % (param, mode_terp))
+        f.write("%s%s_punishshift." % (param, mode_terp))
     print(Popen("%ster%s %ster%s.param" % (terp, mode_terp, temp, mode_terp),
                 stdout=PIPE,
                 shell=True

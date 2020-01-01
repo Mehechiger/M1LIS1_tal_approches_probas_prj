@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 import pandas as pd
 import os
@@ -18,62 +19,57 @@ if not os.path.isdir("%shist/" % output_plots):
     os.makedirs("%shist/" % output_plots)
 
 
-res = []
+res = pd.DataFrame(columns=["lang_pair", "metric", "direction",
+                            "mean", "diff_mean", "median", "diff_median", "std",
+                            "mean_norm", "diff_mean_norm", "median_norm", "diff_median_norm", "std_norm"
+                            ])
 
 for metric in metrics:
     df = load_scr("%s%s..seg.scr" % (input_, metric))
+    df_norm = df.copy()
+    df_norm.score = (df_norm.score-df_norm.score.min()) / \
+        (df_norm.score.max()-df_norm.score.min())
+
+    plot = sns.FacetGrid(df_norm, hue="direction", margin_titles=True)
+    plot.map(sns.distplot, 'score')
+    plot.add_legend()
+    plot.set_xlabels('%s score (normalized)' % metric)
+    plot.savefig("%shist/%s.jpg" % (output_plots, metric))
+
+    plot = sns.FacetGrid(df_norm, col='lang_pair', col_wrap=3,
+                         hue="direction", margin_titles=True)
+    plot.map(sns.distplot, 'score')
+    plot.add_legend()
+    plot.set_xlabels('%s score (normalized)' % metric)
+    plot.savefig("%shist/%s_langpair_wide.jpg" % (output_plots, metric))
 
     for direction in directions:
         slc = df[df.direction == direction].score
+        #slc_norm = (slc-slc.min())/(slc.max()-slc.min())
+        slc_norm = df_norm[df_norm.direction == direction].score
 
-        plt.hist(slc, bins=50, label=direction, alpha=0.4)
+        res.loc[res.shape[0]+1] = pd.Series({"metric": metric,
+                                             "direction": direction,
+                                             "mean": slc.mean(),
+                                             "median": slc.median(),
+                                             "std": slc.std(),
+                                             "mean_norm": slc_norm.mean(),
+                                             "median_norm": slc_norm.median(),
+                                             "std_norm": slc_norm.std()
+                                             })
 
-        res.append({"metric": metric,
-                    "direction": direction,
-                    "mean": slc.mean(),
-                    "median": slc.median(),
-                    "std": slc.std()
-                    })
+    slc = df.score
+    slc0 = df[df.direction == directions[0]].score
+    slc0_norm = (slc0-slc.min())/(slc.max()-slc.min())
+    slc1 = df[df.direction == directions[1]].score
+    slc1_norm = (slc1-slc.min())/(slc.max()-slc.min())
+    res.loc[res.shape[0]+1] = pd.Series({"metric": metric,
+                                         "diff_mean": slc0.mean()-slc1.mean(),
+                                         "diff_median": slc0.median()-slc1.median(),
+                                         "diff_mean_norm": slc0_norm.mean()-slc1_norm.mean(),
+                                         "diff_median_norm": slc0_norm.median()-slc1_norm.median()
+                                         })
 
-    res.append({"metric": metric,
-                "diff_mean": df[df.direction == directions[0]].score.mean()-df[df.direction == directions[1]].score.mean(),
-                "diff_median": df[df.direction == directions[0]].score.median()-df[df.direction == directions[1]].score.median()
-                })
-
-    plt.title('%s hist' % metric)
-    plt.xlabel('%s score' % metric)
-    plt.ylabel('count')
-    plt.legend()
-    plt.savefig("%shist/all_%s.jpg" % (output_plots, metric))
-    plt.clf()
-
-for metric in metrics:
-    df = load_scr("%s%s..seg.scr" % (input_, metric))
-    df.score = (df.score-df.score.min())/(df.score.max()-df.score.min())
-
-    for direction in directions:
-        slc = df[df.direction == direction].score
-
-        plt.hist(slc, bins=50, label=direction, alpha=0.2)
-
-        res.append({"metric": metric,
-                    "direction": direction,
-                    "norm_mean": slc.mean(),
-                    "norm_median": slc.median(),
-                    "norm_std": slc.std()
-                    })
-
-    res.append({"metric": metric,
-                "diff_norm_mean": df[df.direction == directions[0]].score.mean()-df[df.direction == directions[1]].score.mean(),
-                "diff_norm_median": df[df.direction == directions[0]].score.median()-df[df.direction == directions[1]].score.median()
-                })
-
-plt.title('all hist')
-plt.xlabel('all scores')
-plt.ylabel('count')
-plt.legend()
-plt.savefig("%shist/all_all.jpg" % output_plots)
-plt.clf()
 
 for lang_pair in lang_pairs:
     for metric in metrics:
@@ -81,64 +77,33 @@ for lang_pair in lang_pairs:
 
         for direction in directions:
             slc = df[df.lang_pair == lang_pair][df.direction == direction].score
+            slc_norm = (slc-slc.min())/(slc.max()-slc.min())
 
-            plt.hist(slc, bins=50, label=direction, alpha=0.4)
+            res.loc[res.shape[0]+1] = pd.Series({"metric": metric,
+                                                 "direction": direction,
+                                                 "lang_pair": lang_pair,
+                                                 "mean": slc.mean(),
+                                                 "median": slc.median(),
+                                                 "std": slc.std(),
+                                                 "mean_norm": slc_norm.mean(),
+                                                 "median_norm": slc_norm.median(),
+                                                 "std_norm": slc_norm.std()
+                                                 })
 
-            res.append({"metric": metric,
-                        "direction": direction,
-                        "lang_pair": lang_pair,
-                        "mean": slc.mean(),
-                        "median": slc.median(),
-                        "std": slc.std()
-                        })
-
-        res.append({"metric": metric,
-                    "lang_pair": lang_pair,
-                    "diff_mean": df[df.direction == directions[0]].score.mean()-df[df.direction == directions[1]].score.mean(),
-                    "diff_median": df[df.direction == directions[0]].score.median()-df[df.direction == directions[1]].score.median()
-                    })
-
-        plt.title('%s %s hist' % (lang_pair, metric))
-        plt.xlabel('%s %s score' % (lang_pair, metric))
-        plt.ylabel('count')
-        plt.legend()
-        plt.savefig("%shist/%s_%s.jpg" % (output_plots, lang_pair, metric))
-        plt.clf()
-
-    for metric in metrics:
-        df = load_scr("%s%s..seg.scr" % (input_, metric))
-        df.score = (df.score-df.score.min())/(df.score.max()-df.score.min())
-
-        for direction in directions:
-            slc = df[df.lang_pair == lang_pair][df.direction == direction].score
-
-            plt.hist(slc, bins=50, label=direction, alpha=0.2)
-
-            res.append({"metric": metric,
-                        "direction": direction,
-                        "lang_pair": lang_pair,
-                        "norm_mean": slc.mean(),
-                        "norm_median": slc.median(),
-                        "norm_std": slc.std()
-                        })
-
-        res.append({"metric": metric,
-                    "lang_pair": lang_pair,
-                    "diff_norm_mean": df[df.direction == directions[0]].score.mean()-df[df.direction == directions[1]].score.mean(),
-                    "diff_norm_median": df[df.direction == directions[0]].score.median()-df[df.direction == directions[1]].score.median()
-                    })
-
-    plt.title('%s all hist' % lang_pair)
-    plt.xlabel('%s all score' % lang_pair)
-    plt.ylabel('count')
-    plt.legend()
-    plt.savefig("%shist/%s_all.jpg" % (output_plots, lang_pair))
-    plt.clf()
+        slc = df[df.lang_pair == lang_pair].score
+        slc0 = df[df.lang_pair ==
+                  lang_pair][df.direction == directions[0]].score
+        slc0_norm = (slc0-slc.min())/(slc.max()-slc.min())
+        slc1 = df[df.lang_pair ==
+                  lang_pair][df.direction == directions[1]].score
+        slc1_norm = (slc1-slc.min())/(slc.max()-slc.min())
+        res.loc[res.shape[0]+1] = pd.Series({"metric": metric,
+                                             "lang_pair": lang_pair,
+                                             "diff_mean": slc0.mean()-slc1.mean(),
+                                             "diff_median": slc0.median()-slc1.median(),
+                                             "diff_mean_norm": slc0_norm.mean()-slc1_norm.mean(),
+                                             "diff_median_norm": slc0_norm.median()-slc1_norm.median()
+                                             })
 
 
-res = pd.DataFrame(res)
-res = res[["lang_pair", "metric", "direction",
-           "mean", "diff_mean", "median", "diff_median", "std",
-           "norm_mean", "diff_norm_mean", "norm_median", "diff_norm_median"
-           ]]
 res.to_csv("%sa0_stats.csv" % output)
