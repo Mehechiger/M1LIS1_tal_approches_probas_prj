@@ -28,8 +28,12 @@ for metric in metrics:
 
         plt.hist(slc, bins=50, label=direction, alpha=0.4)
 
-        res.append({"metric": metric, "direction": direction, "mean": slc.mean(
-        ), "median": slc.median(), "std": slc.std()})
+        res.append({"metric": metric,
+                    "direction": direction,
+                    "mean": slc.mean(),
+                    "median": slc.median(),
+                    "std": slc.std()
+                    })
 
     plt.title('%s hist' % metric)
     plt.xlabel('%s score' % metric)
@@ -47,8 +51,13 @@ for lang_pair in lang_pairs:
 
             plt.hist(slc, bins=50, label=direction, alpha=0.4)
 
-            res.append({"metric": metric, "direction": direction, "lang_pair": lang_pair,
-                        "mean": slc.mean(), "median": slc.median(), "std": slc.std()})
+            res.append({"metric": metric,
+                        "direction": direction,
+                        "lang_pair": lang_pair,
+                        "mean": slc.mean(),
+                        "median": slc.median(),
+                        "std": slc.std()
+                        })
 
         plt.title('%s %s hist' % (lang_pair, metric))
         plt.xlabel('%s %s score' % (lang_pair, metric))

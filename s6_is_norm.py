@@ -23,8 +23,12 @@ for metric in metrics:
         slc = df[df.direction == direction].score
 
         statistic, critical_values, significance_level = anderson(slc)
-        res.append({"metric": metric, "direction": direction, "anderson_statistic": statistic,
-                    "anderson_critical_values": critical_values, "anderson_significance_level": significance_level})
+        res.append({"metric": metric,
+                    "direction": direction,
+                    "anderson_statistic": statistic,
+                    "anderson_critical_values": critical_values,
+                    "anderson_significance_level": significance_level
+                    })
 
 
 for lang_pair in lang_pairs:
@@ -35,8 +39,13 @@ for lang_pair in lang_pairs:
             slc = df[df.lang_pair == lang_pair][df.direction == direction].score
 
             statistic, critical_values, significance_level = anderson(slc)
-            res.append({"metric": metric, "direction": direction, "lang_pair": lang_pair, "anderson_statistic": statistic,
-                        "anderson_critical_values": critical_values, "anderson_significance_level": significance_level})
+            res.append({"metric": metric,
+                        "direction": direction,
+                        "lang_pair": lang_pair,
+                        "anderson_statistic": statistic,
+                        "anderson_critical_values": critical_values,
+                        "anderson_significance_level": significance_level
+                        })
 
 
 res = pd.DataFrame(res)

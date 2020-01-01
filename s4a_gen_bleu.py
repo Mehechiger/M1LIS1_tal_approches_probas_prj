@@ -5,7 +5,7 @@ from nltk.translate.bleu_score import sentence_bleu, corpus_bleu
 input_ = "../data/data_regen.json"
 output = "../scores/"
 
-bleu_weights = (1, 1, 1, 1)
+bleu_weights = (1, 0, 0, 0)
 bleu_autoreweigh = True
 
 with open(input_, "r") as f:
@@ -69,9 +69,9 @@ nist_sys = "\n".join("\t".join([direction,
                      for direction, direction_dict in data_regen.items()
                      )
 
-with open("%sbleu..seg.scr" % output, "w") as f:
+with open("%sbleu_1g..seg.scr" % output, "w") as f:
     f.write(nist_seg)
-with open("%sbleu..doc.scr" % output, "w") as f:
+with open("%sbleu_1g..doc.scr" % output, "w") as f:
     f.write(nist_doc)
-with open("%sbleu..sys.scr" % output, "w") as f:
+with open("%sbleu_1g..sys.scr" % output, "w") as f:
     f.write(nist_sys)
