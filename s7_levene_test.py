@@ -29,6 +29,13 @@ for metric in metrics:
     res.append({"metric": metric, "levene_statistic": statistic,
                 "levene_pvalue": pvalue})
 
+res = pd.DataFrame(res)
+res = res[["metric", "levene_statistic", "levene_pvalue"]]
+res.to_csv("%sdirection_level_a2_levene_test.csv" % output)
+
+
+res = []
+
 for lang_pair in lang_pairs:
     for metric in metrics:
         df = load_scr("%s%s..seg.scr" % (input_, metric))
@@ -47,4 +54,4 @@ for lang_pair in lang_pairs:
 
 res = pd.DataFrame(res)
 res = res[["lang_pair", "metric", "levene_statistic", "levene_pvalue"]]
-res.to_csv("%sa2_levene_test.csv" % output)
+res.to_csv("%slangpair_level_a2_levene_test.csv" % output)

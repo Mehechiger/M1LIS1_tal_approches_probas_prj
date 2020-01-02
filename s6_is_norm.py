@@ -30,6 +30,13 @@ for metric in metrics:
                     "anderson_significance_level": significance_level
                     })
 
+res = pd.DataFrame(res)
+res = res[["metric", "direction", "anderson_statistic",
+           "anderson_critical_values", "anderson_significance_level"]]
+res.to_csv("%sdirection_level_a1_is_norm.csv" % output)
+
+
+res = []
 
 for lang_pair in lang_pairs:
     for metric in metrics:
@@ -51,4 +58,4 @@ for lang_pair in lang_pairs:
 res = pd.DataFrame(res)
 res = res[["lang_pair", "metric", "direction", "anderson_statistic",
            "anderson_critical_values", "anderson_significance_level"]]
-res.to_csv("%sa1_is_norm.csv" % output)
+res.to_csv("%slangpair_level_a1_is_norm.csv" % output)

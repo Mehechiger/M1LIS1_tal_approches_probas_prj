@@ -5,12 +5,11 @@ import pandas as pd
 import os
 from s0_load_scr import load_scr
 
-# source: https://stackoverflow.com/a/44961245
-
 
 def vertical_mean_line(x, vars_, **kwargs):
-    #ls = {vars_[i]: "-"*(i+1) for i in range(len(vars_))}
-    #plt.axvline(x.mean(), linestyle=ls[kwargs["label"]], color=kwargs['color'])
+    """
+    source: https://stackoverflow.com/a/44961245
+    """
     plt.axvline(x.mean(), linestyle="--", color=kwargs['color'])
     txkw = dict(size=7, color=kwargs['color'], rotation=90)
     tx = "mean: {:.2f}, std: {:.2f}".format(x.mean(), x.std())
@@ -28,11 +27,11 @@ lang_pairs = ["en_ru", "ru_en", "fi_en", "cs_en", "ro_en", "de_en", "tr_en"]
 
 if not os.path.isdir(output):
     os.makedirs(output)
-if not os.path.isdir("%skde/" % output_plots):
-    os.makedirs("%skde/" % output_plots)
+if not os.path.isdir("%s" % output_plots):
+    os.makedirs("%s" % output_plots)
 
 
-res = pd.DataFrame(columns=["lang_pair", "metric", "direction",
+res = pd.DataFrame(columns=["metric", "direction",
                             "mean", "diff_mean", "median", "diff_median", "std",
                             "mean_norm", "diff_mean_norm", "median_norm", "diff_median_norm", "std_norm"
                             ])
@@ -45,21 +44,21 @@ for metric in metrics:
 
     plot = sns.FacetGrid(df_norm, hue="direction",
                          margin_titles=True, height=3.2, aspect=3)
-    plot.map(sns.kdeplot, 'score', shade=True)
+    plot.map(sns.distplot, 'score', bins=50)
     plot.map(vertical_mean_line, 'score', vars_=directions)
     plot.add_legend()
     plot.set(xlim=(0, 1))
     plot.set_xlabels('%s score (normalized)' % metric)
-    plot.savefig("%skde/%s.jpg" % (output_plots, metric))
+    plot.savefig("%sdirection_level_%s.jpg" % (output_plots, metric))
 
     plot = sns.FacetGrid(df_norm, col='lang_pair', col_wrap=2,
                          hue="direction", margin_titles=True, height=3.2, aspect=3)
-    plot.map(sns.kdeplot, 'score', shade=True)
+    plot.map(sns.distplot, 'score', bins=50)
     plot.map(vertical_mean_line, 'score', vars_=directions)
     plot.add_legend()
     plot.set(xlim=(0, 1))
     plot.set_xlabels('%s score (normalized)' % metric)
-    plot.savefig("%skde/%s_langpair_wide.jpg" % (output_plots, metric))
+    plot.savefig("%slangpair_level_%s.jpg" % (output_plots, metric))
 
     for direction in directions:
         slc = df[df.direction == direction].score
@@ -86,6 +85,13 @@ for metric in metrics:
                                          "diff_mean_norm": slc0_norm.mean()-slc1_norm.mean(),
                                          "diff_median_norm": slc0_norm.median()-slc1_norm.median()
                                          })
+
+res.to_csv("%sdirection_level_a0_stats.csv" % output)
+
+res = pd.DataFrame(columns=["lang_pair", "metric", "direction",
+                            "mean", "diff_mean", "median", "diff_median", "std",
+                            "mean_norm", "diff_mean_norm", "median_norm", "diff_median_norm", "std_norm"
+                            ])
 
 for lang_pair in lang_pairs:
     for metric in metrics:
@@ -121,4 +127,4 @@ for lang_pair in lang_pairs:
                                              "diff_median_norm": slc0_norm.median()-slc1_norm.median()
                                              })
 
-res.to_csv("%sa0_stats.csv" % output)
+res.to_csv("%slangpair_level_a0_stats.csv" % output)
