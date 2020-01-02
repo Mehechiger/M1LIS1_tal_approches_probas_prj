@@ -31,18 +31,20 @@ if not os.path.isdir("%s" % output_plots):
     os.makedirs("%s" % output_plots)
 
 
-res = pd.DataFrame(columns=["metric", "direction",
-                            "mean", "diff_mean", "median", "diff_median", "std",
-                            "mean_norm", "diff_mean_norm", "median_norm", "diff_median_norm", "std_norm"
+res = pd.DataFrame(columns=["metric", "direction", "sample_size",
+                            "mean", "median", "std",
+                            "mean_norm", "median_norm", "std_norm"
                             ])
 
 for metric in metrics:
     df = load_scr("%s%s..seg.scr" % (input_, metric))
     df_norm = df.copy()
+    if metric[:3] == "ter":
+        df_norm.score = -df_norm.score
     df_norm.score = (df_norm.score-df_norm.score.min()) / \
         (df_norm.score.max()-df_norm.score.min())
 
-    plot = sns.FacetGrid(df_norm, hue="direction",
+    plot = sns.FacetGrid(df_norm, hue="direction", hue_order=directions,
                          margin_titles=True, height=3.2, aspect=3)
     plot.map(sns.distplot, 'score', bins=50)
     plot.map(vertical_mean_line, 'score', vars_=directions)
@@ -52,7 +54,7 @@ for metric in metrics:
     plot.savefig("%sdirection_level_%s.jpg" % (output_plots, metric))
 
     plot = sns.FacetGrid(df_norm, col='lang_pair', col_wrap=2,
-                         hue="direction", margin_titles=True, height=3.2, aspect=3)
+                         hue="direction", hue_order=directions, margin_titles=True, height=3.2, aspect=3)
     plot.map(sns.distplot, 'score', bins=50)
     plot.map(vertical_mean_line, 'score', vars_=directions)
     plot.add_legend()
@@ -66,6 +68,7 @@ for metric in metrics:
 
         res.loc[res.shape[0]+1] = pd.Series({"metric": metric,
                                              "direction": direction,
+                                             "sample_size": slc.shape[0],
                                              "mean": slc.mean(),
                                              "median": slc.median(),
                                              "std": slc.std(),
@@ -76,34 +79,42 @@ for metric in metrics:
 
     slc = df.score
     slc0 = df[df.direction == directions[0]].score
-    slc0_norm = (slc0-slc.min())/(slc.max()-slc.min())
+    slc0_norm = df_norm[df_norm.direction == directions[0]].score
     slc1 = df[df.direction == directions[1]].score
-    slc1_norm = (slc1-slc.min())/(slc.max()-slc.min())
+    slc1_norm = df_norm[df_norm.direction == directions[1]].score
     res.loc[res.shape[0]+1] = pd.Series({"metric": metric,
-                                         "diff_mean": slc0.mean()-slc1.mean(),
-                                         "diff_median": slc0.median()-slc1.median(),
-                                         "diff_mean_norm": slc0_norm.mean()-slc1_norm.mean(),
-                                         "diff_median_norm": slc0_norm.median()-slc1_norm.median()
+                                         "direction": "(difference)",
+                                         "mean": slc0.mean()-slc1.mean(),
+                                         "median": slc0.median()-slc1.median(),
+                                         "mean_norm": slc0_norm.mean()-slc1_norm.mean(),
+                                         "median_norm": slc0_norm.median()-slc1_norm.median()
                                          })
 
 res.to_csv("%sdirection_level_a0_stats.csv" % output)
 
-res = pd.DataFrame(columns=["lang_pair", "metric", "direction",
-                            "mean", "diff_mean", "median", "diff_median", "std",
-                            "mean_norm", "diff_mean_norm", "median_norm", "diff_median_norm", "std_norm"
+res = pd.DataFrame(columns=["lang_pair", "metric", "direction", "sample_size",
+                            "mean", "median", "std",
+                            "mean_norm", "median_norm", "std_norm"
                             ])
 
 for lang_pair in lang_pairs:
     for metric in metrics:
         df = load_scr("%s%s..seg.scr" % (input_, metric))
+        df_norm = df.copy()
+        if metric[:3] == "ter":
+            df_norm.score = -df_norm.score
+        df_norm.score = (df_norm.score-df_norm.score.min()) / \
+            (df_norm.score.max()-df_norm.score.min())
 
         for direction in directions:
             slc = df[df.lang_pair == lang_pair][df.direction == direction].score
-            slc_norm = (slc-slc.min())/(slc.max()-slc.min())
+            slc_norm = df_norm[df_norm.lang_pair ==
+                               lang_pair][df_norm.direction == direction].score
 
             res.loc[res.shape[0]+1] = pd.Series({"metric": metric,
                                                  "direction": direction,
                                                  "lang_pair": lang_pair,
+                                                 "sample_size": slc.shape[0],
                                                  "mean": slc.mean(),
                                                  "median": slc.median(),
                                                  "std": slc.std(),
@@ -115,11 +126,14 @@ for lang_pair in lang_pairs:
         slc = df[df.lang_pair == lang_pair].score
         slc0 = df[df.lang_pair ==
                   lang_pair][df.direction == directions[0]].score
-        slc0_norm = (slc0-slc.min())/(slc.max()-slc.min())
+        slc0_norm = df_norm[df_norm.lang_pair ==
+                            lang_pair][df_norm.direction == directions[0]].score
         slc1 = df[df.lang_pair ==
                   lang_pair][df.direction == directions[1]].score
-        slc1_norm = (slc1-slc.min())/(slc.max()-slc.min())
+        slc1_norm = df_norm[df_norm.lang_pair ==
+                            lang_pair][df_norm.direction == directions[1]].score
         res.loc[res.shape[0]+1] = pd.Series({"metric": metric,
+                                             "direction": "(difference)",
                                              "lang_pair": lang_pair,
                                              "diff_mean": slc0.mean()-slc1.mean(),
                                              "diff_median": slc0.median()-slc1.median(),
