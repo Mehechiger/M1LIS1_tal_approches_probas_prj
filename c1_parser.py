@@ -13,14 +13,15 @@ with open(input_, "r") as f:
     data = json.load(f)
 
 parsed = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: list())))
-d_type = {"ref": "tgt_lang", "src": "src_lang"}
 
 for direction, direction_dict in data.items():
     for lang_pair, langpair_list in direction_dict.items():
+        langs = [("src", lang_pair.split("_")[0]),
+                 ("ref", lang_pair.split("_")[1])
+                 ]
         for it in langpair_list:
-            for type_ in d_type:
+            for type_, lang in langs:
                 sent = it[type_]
-                lang = it[d_type[type_]]
                 if lang == "en" or lang == "de":
                     doc = globals()[lang](sent)
                     parsed[direction][lang_pair][type_].append([{"text": token.text,
@@ -36,6 +37,9 @@ for direction, direction_dict in data.items():
                                                                 for token in doc
                                                                 ])
                 else:
+                    """
+                    find proper tools to parse other langs!!!
+                    """
                     pass
 
 with open("%sdata_parsed.json" % output, "w") as f:
