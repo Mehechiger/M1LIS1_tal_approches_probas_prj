@@ -44,8 +44,12 @@ for metric in metrics:
     df_norm.score = (df_norm.score-df_norm.score.min()) / \
         (df_norm.score.max()-df_norm.score.min())
 
-    plot = sns.FacetGrid(df_norm, hue="direction", hue_order=directions,
-                         margin_titles=True, height=3.2, aspect=3)
+    plot = sns.FacetGrid(df_norm,
+                         hue="direction",
+                         hue_order=directions,
+                         margin_titles=True,
+                         height=3.2,
+                         aspect=3)
     plot.map(sns.distplot, 'score', bins=50)
     plot.map(vertical_mean_line, 'score', vars_=directions)
     plot.add_legend()
@@ -53,8 +57,15 @@ for metric in metrics:
     plot.set_xlabels('%s score (normalized)' % metric)
     plot.savefig("%sdirection_level_%s.jpg" % (output_plots, metric))
 
-    plot = sns.FacetGrid(df_norm, col='lang_pair', col_wrap=2,
-                         hue="direction", hue_order=directions, margin_titles=True, height=3.2, aspect=3)
+    plot = sns.FacetGrid(df_norm,
+                         col='lang_pair',
+                         col_order=lang_pairs,
+                         col_wrap=2,
+                         hue="direction",
+                         hue_order=directions,
+                         margin_titles=True,
+                         height=3.2,
+                         aspect=3)
     plot.map(sns.distplot, 'score', bins=50)
     plot.map(vertical_mean_line, 'score', vars_=directions)
     plot.add_legend()

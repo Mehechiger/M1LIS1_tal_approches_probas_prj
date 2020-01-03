@@ -6,7 +6,7 @@ from nltk import word_tokenize as tok
 input_ = "../data/data_regen.json"
 output = "../scores/"
 
-bleu_weights = (0, 0, 0, 4)
+bleu_weights = (1, 0, 0, 0)
 bleu_autoreweigh = True
 
 with open(input_, "r") as f:
