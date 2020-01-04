@@ -1,8 +1,15 @@
+import sys
 import json
 from collections import defaultdict
 
-input_ = "../data/da_newstest2016.json"
-output = "../data/"
+path = sys.path[0]
+if path[-8:] != "/scripts":
+    print('scripts must be under "scripts" folder!')
+    exit()
+path = path[:-7]
+
+input_ = "%sdata/da_newstest2016.json" % path
+output = "%sdata/" % path
 
 with open(input_, "r")as f:
     data = json.load(f)

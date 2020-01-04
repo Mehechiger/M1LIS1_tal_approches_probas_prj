@@ -1,13 +1,21 @@
 import json
 import os
+import sys
 import shutil
 from subprocess import Popen, PIPE
 
-input_ = "../data/data_regen.json"
-temp = "../scores/temp/"
-output = "../scores/"
-terp = "../terp-master/bin/"
-terp_ph_db = "../terp-master/data/phrases.db"
+path = sys.path[0]
+if path[-8:] != "/scripts":
+    print('scripts must be under "scripts" folder!')
+    exit()
+path = path[:-7]
+
+input_ = "%sdata/data_regen.json" % path
+temp = "%sscores/temp/" % path
+output = "%sscores/" % path
+terp = "%sterp-master/bin/" % path
+terp_ph_db = "%sterp-master/data/phrases.db" % path
+
 modes_terp = ["p", ]
 params = ["Reference File (filename) : ",
           "Hypothesis File (filename) : ",

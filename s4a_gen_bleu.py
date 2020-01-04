@@ -1,10 +1,17 @@
 import json
 import re
+import sys
 from nltk.translate.bleu_score import sentence_bleu, corpus_bleu
 from nltk import word_tokenize as tok
 
-input_ = "../data/data_regen.json"
-output = "../scores/"
+path = sys.path[0]
+if path[-8:] != "/scripts":
+    print('scripts must be under "scripts" folder!')
+    exit()
+path = path[:-7]
+
+input_ = "%sdata/data_regen.json" % path
+output = "%sscores/" % path
 
 bleu_weights = (1, 0, 0, 0)
 bleu_autoreweigh = True
@@ -12,23 +19,6 @@ bleu_autoreweigh = True
 with open(input_, "r") as f:
     data_regen = json.load(f)
 
-"""
-# punc = re.compile('[,…` .[•»/:#‘’!(;"?”)+«“\]]')
-punc_data = ['"', '%', ':', '-', '6',
-             '8', '“', '(', '€', '…',
-             ' ', '»', '\xad', '@', '?',
-             '+', '.', "'", '´', '‘',
-             '[', '«', '`', '²', '–',
-             '/', '9', '=', '2', ',',
-             '7', '№', '°', ')', '\]',
-             '_', '4', '!', '£', '~',
-             '0', '$', '•', '1', '&',
-             ';', '’', '5', '#', '”'
-             ]
-punc = re.compile('[%s]' % "".join(punc_data))
-print(punc)
-exit()
-"""
 
 nist_seg = "\n".join("\t".join([direction,
                                 "",

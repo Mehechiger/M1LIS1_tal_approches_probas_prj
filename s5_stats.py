@@ -3,6 +3,7 @@ import seaborn as sns
 import numpy as np
 import pandas as pd
 import os
+import sys
 from s0_load_scr import load_scr
 
 
@@ -16,9 +17,15 @@ def vertical_mean_line(x, vars_, **kwargs):
     plt.text(x.mean()+0.005, 0.052, tx, **txkw)
 
 
-input_ = "../scores/"
-output = "../analysis/"
-output_plots = "../plots/"
+path = sys.path[0]
+if path[-8:] != "/scripts":
+    print('scripts must be under "scripts" folder!')
+    exit()
+path = path[:-7]
+
+input_ = "%sscores/" % path
+output = "%sanalysis/" % path
+output_plots = "%splots/" % path
 
 metrics = set(d.split(".")[0] for d in os.listdir(input_) if d[-4:] == ".scr")
 directions = ["forward", "reverse"]

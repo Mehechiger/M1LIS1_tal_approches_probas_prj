@@ -1,9 +1,16 @@
+import sys
 import spacy
 import json
 from collections import defaultdict
 
-input_ = "/Users/mehec/nlp/approbas/prj/data/data_regen.json"
-output = "/Users/mehec/nlp/approbas/prj/data/"
+path = sys.path[0]
+if path[-8:] != "/scripts":
+    print('scripts must be under "scripts" folder!')
+    exit()
+path = path[:-7]
+
+input_ = "%sdata/data_regen.json" % path
+output = "%sdata/" % path
 
 
 en = spacy.load("en_core_web_sm")
@@ -32,7 +39,7 @@ for direction, direction_dict in data.items():
                                                                  "shape": token.shape_,
                                                                  "alpha": token.is_alpha,
                                                                  "stop": token.is_stop,
-                                                                 "head": token.head.i if token.dep_ != "ROOT" else 0
+                                                                 "head": token.head.i if token.dep_ != "ROOT" else -1
                                                                  }
                                                                 for token in doc
                                                                 ])

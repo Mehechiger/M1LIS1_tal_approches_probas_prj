@@ -1,11 +1,18 @@
 import pandas as pd
 import os
+import sys
 from collections import defaultdict
 from scipy.stats import ttest_ind, t
 from s0_load_scr import load_scr
 
-input_ = "../scores/"
-output = "../analysis/"
+path = sys.path[0]
+if path[-8:] != "/scripts":
+    print('scripts must be under "scripts" folder!')
+    exit()
+path = path[:-7]
+
+input_ = "%sscores/" % path
+output = "%sanalysis/" % path
 
 metrics = set(d.split(".")[0] for d in os.listdir(input_) if d[-4:] == ".scr")
 directions = ["forward", "reverse"]

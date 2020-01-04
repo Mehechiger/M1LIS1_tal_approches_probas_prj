@@ -1,8 +1,15 @@
 import json
 import os
+import sys
 
-input_ = "../data/data_regen.json"
-output = "../scores/"
+path = sys.path[0]
+if path[-8:] != "/scripts":
+    print('scripts must be under "scripts" folder!')
+    exit()
+path = path[:-7]
+
+input_ = "%sdata/data_regen.json" % path
+output = "%sscores/" % path
 
 if not os.path.isdir(output):
     os.makedirs(output)
