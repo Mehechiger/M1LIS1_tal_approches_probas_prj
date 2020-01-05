@@ -1,31 +1,49 @@
 from collections import Counter, defaultdict
 from math import log
+import re
 
 
 class Direction_classifier:
     def __init__(self, train, dev):
-        self.train = train
-        self.dev = dev
-        self._features = ["ttr",
+        self.train, self.dev = train, dev
+        self.ngram_features = ["pos", "chr"]
+        self._features = {"ttr",
                           "mean_word_rank",
                           "cohesive_markers",
-                          "pos_n_grams",
-                          "chr_n_grams",
+                          "pos_2_grams",
+                          "pos_3_grams",
+                          "chr_2_grams",
+                          "chr_3_grams",
                           "positional_token_frequency",
                           "function_words",
                           "puncs",
                           "pronouns",
                           "mean_dep_tree_depth"
-                          ]
-        self.features = self._features
+                          }
+        self.set_features()
+        self.vec = defaultdict(int)
 
-    def set_features(self, features):
-        self.features = []
+    def set_features(self, features=None):
+        if not features:
+            features = self._features
 
-        non_existent_features = []
+        self.pos_ns = set()
+        self.chr_ns = set()
+        self.features = set()
+        self.features_ = set()
+
+        non_existent_features = set()
+
         for feature in features:
-            if feature in self._features:
-                self.features.append(feature)
+            if any(feature[:len(ngf)] == ngf for ngf in self.ngram_features) and feature[-6:] == "_grams":
+                self.features.add(re.compile(
+                    "(?<=_)\d(?=_)").sub("n", feature))
+                self.features_.add(feature)
+                eval("self.%s_ns" % feature.split("_")[0]).add(
+                    int(feature.split("_")[1]))
+            elif feature in self._features:
+                self.features.add(feature)
+                self.features_.add(feature)
             else:
                 non_existent_features.append(feature)
         if non_existent_features:
@@ -33,7 +51,7 @@ class Direction_classifier:
                   " ".join(non_existent_features)
                   )
         print("now using features: %s" %
-              " ".join(self.features)
+              " ".join(self.features_)
               )
 
         if not self.features:
@@ -47,26 +65,30 @@ class Direction_classifier:
         n = sum(n_pos for n_pos in poss.values())
         return {"&*ttr*&": 100*log(n)/(1-v_1/v)}
 
-    def mean_word_rank(self,):
+    def mean_word_rank(self, chunk):
         """
         """
         return {}
 
-    def cohesive_markers(self,):
+    def cohesive_markers(self, chunk):
         """
         """
         return {}
 
-    def pos_n_grams(self, chunk, n):
+    def pos_n_grams(self, chunk):
         return Counter("_".join(sent[i+j]["pos"] for j in range(i))
                        for sent in chunk
-                       for i in range(len(sent)-n+1))
+                       for n in self.pos_ns
+                       for i in range(len(sent)-n+1)
+                       )
 
-    def chr_n_grams(self, chunk, n):
+    def chr_n_grams(self, chunk):
         return Counter("&*chr_n_grams*&%s" % token["text"][i:i+n]
                        for sent in chunk
                        for token in sent
-                       for i in range(len(token)-n+1))
+                       for n in self.chr_ns
+                       for i in range(len(token)-n+1)
+                       )
 
     def positional_token_frequency(self, chunk):
         positional_tokens = zip(*((sent[0]["text"],
@@ -90,7 +112,7 @@ class Direction_classifier:
                 if token in token_counts
                 }
 
-    def function_words(self,):
+    def function_words(self, chunk):
         """
         """
         return {}
@@ -101,15 +123,15 @@ class Direction_classifier:
                                                 for sent in chunk
                                                 for token in sent
                                                 if token["pos"] == "PUNCT"
-                                                )
+                                                ).items()
                 }
 
     def pronouns(self, chunk):
-        return {"&*prons*&": len(1
-                                 for sent in chunk
-                                 for token in sent
-                                 if token["pos"] == "PRON"
-                                 )/sum(len(sent) for sent in chunk)}
+        return {"&*prons*&": len([1
+                                  for sent in chunk
+                                  for token in sent
+                                  if token["pos"] == "PRON"
+                                  ])/sum(len(sent) for sent in chunk)}
 
     def mean_dep_tree_depth(self, chunk):
         def bottom_up(sent, head):
@@ -119,9 +141,19 @@ class Direction_classifier:
             else:
                 return bottom_up(sent, head)+1
 
-        depth = 0
+        depths = 0
         n = 0
         for sent in chunk:
             sent = [token["head"] for token in sent]
             depths += max(bottom_up(sent, head) for head in sent)
         return {"&*mean_dep_tree_depth*&": depths/len(chunk)}
+
+    def update(self):
+        pass
+
+    def train(self):
+        pass
+
+    def classify(self, chunk):
+        for feature in self.features:
+            print(eval("self.%s" % feature)(chunk))
