@@ -108,7 +108,7 @@ input_ = "%s/data/data_parsed.json" % path
 directions = ["reverse", "forward"]
 lang_pairs = ["ru_en", "en_ru", "ro_en", "fi_en", "de_en", "cs_en", "tr_en"]
 types = ["ref", "src"]
-chunk_size = 300
+chunk_size = 100
 train_dev_test_ratio = (3, 1, 1)
 
 # load data from parsed data file
@@ -127,6 +127,11 @@ data = {direction: chunk_datapair(direction_dict, chunk_size)
 
 # make train, dev and test
 train, dev, test = make_train_dev_test(data, train_dev_test_ratio)
+"""
+"""
+print(len(train), len(dev), len(test))
+"""
+"""
 
 # regain RAM
 del data
