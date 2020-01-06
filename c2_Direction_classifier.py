@@ -1,5 +1,5 @@
 from collections import Counter, defaultdict
-from math import log
+from math import log, sqrt
 import re
 
 
@@ -21,7 +21,18 @@ class Direction_classifier:
                           "mean_dep_tree_depth"
                           }
         self.set_features()
-        self.vec = defaultdict(int)
+        self.w = defaultdict(int)
+        self.x_norm_mean = defaultdict(lambda: 0)
+        self.x_norm_std = defaultdict(lambda: 1)
+        self.m = 0
+        self.n_updates = 0
+
+    def del_learned(self):
+        self.w = defaultdict(int)
+        self.x_norm_mean = defaultdict(lambda: 0)
+        self.x_norm_std = defaultdict(lambda: 1)
+        self.m = 0
+        self.n_updates = 0
 
     def set_features(self, features=None):
         if not features:
@@ -58,82 +69,102 @@ class Direction_classifier:
             print("must use some features!")
             exit()
 
-    def ttr(self, chunk):
+    def ttr(self, chunk, type_):
         poss = Counter(token["pos"] for sent in chunk for token in sent)
         v = len(poss)
         v_1 = len({pos for pos in poss if poss[pos] == 1})
         n = sum(n_pos for n_pos in poss.values())
-        return {"&*ttr*&": 100*log(n)/(1-v_1/v)}
+        try:
+            return defaultdict(int, {"&*%s_ttr*&" % type_: 100*log(n)/(1-v_1/v)})
+        except ZeroDivisionError:
+            return defaultdict(int)
 
-    def mean_word_rank(self, chunk):
+    def mean_word_rank(self, chunk, type_):
         """
         """
-        return {}
+        return defaultdict(int, {})
 
-    def cohesive_markers(self, chunk):
+    def cohesive_markers(self, chunk, type_):
         """
         """
-        return {}
+        return defaultdict(int, {})
 
-    def pos_n_grams(self, chunk):
-        return Counter("_".join(sent[i+j]["pos"] for j in range(i))
-                       for sent in chunk
-                       for n in self.pos_ns
-                       for i in range(len(sent)-n+1)
-                       )
+    def pos_n_grams(self, chunk, type_):
+        return defaultdict(int,
+                           Counter("%s_%s" % (type_,
+                                              "_".join(sent[i+j]["pos"]
+                                                       for j in range(n)
+                                                       )
+                                              )
+                                   for sent in chunk
+                                   for n in self.pos_ns
+                                   for i in range(len(sent)-n+1)
+                                   )
+                           )
 
-    def chr_n_grams(self, chunk):
-        return Counter("&*chr_n_grams*&%s" % token["text"][i:i+n]
-                       for sent in chunk
-                       for token in sent
-                       for n in self.chr_ns
-                       for i in range(len(token)-n+1)
-                       )
+    def chr_n_grams(self, chunk, type_):
+        return defaultdict(int,
+                           Counter("&*%s_chr_n_grams*&%s" % (type_, token["text"][i:i+n])
+                                   for sent in chunk
+                                   for token in sent
+                                   for n in self.chr_ns
+                                   for i in range(len(token["text"])-n+1)
+                                   )
+                           )
 
-    def positional_token_frequency(self, chunk):
-        positional_tokens = zip(*((sent[0]["text"],
-                                   sent[1:2]["text"],
-                                   sent[-1]["text"],
-                                   sent[-2:-1]["text"],
-                                   sent[-3:-2]["text"]
+    def positional_token_frequency(self, chunk, type_):
+        positional_tokens = zip(*((sent[0]["lemma"],
+                                   sent[1:2][0]["lemma"],
+                                   sent[-1]["lemma"],
+                                   sent[-2:-1][0]["lemma"],
+                                   sent[-3:-2][0]["lemma"]
                                    )
                                   for sent in chunk
                                   ))
-        positional_token_counts = (Counter(pos_tokens)
+        positional_token_counts = (defaultdict(int, Counter(pos_tokens))
                                    for pos_tokens in positional_tokens
                                    )
-        token_counts = Counter(token["text"]
-                               for sent in chunk
-                               for token in sent
-                               )
-        return {"&*pos_%s_token_freq*&%s" % (ind, token): pos_token_count/token_counts[token]
-                for ind, pos_token_counts in enumerate(positional_token_counts)
-                for token, pos_token_count in pos_token_counts.items()
-                if token in token_counts
-                }
+        token_counts = defaultdict(int,
+                                   Counter(token["lemma"]
+                                           for sent in chunk
+                                           for token in sent
+                                           )
+                                   )
+        return defaultdict(int,
+                           {"&*%s_pos_%s_token_freq*&%s" % (type_, ind, token): pos_token_count/token_counts[token]
+                            for ind, pos_token_counts in enumerate(positional_token_counts)
+                            for token, pos_token_count in pos_token_counts.items()
+                            if token in token_counts
+                            }
+                           )
 
-    def function_words(self, chunk):
+    def function_words(self, chunk, type_):
         """
         """
-        return {}
+        return defaultdict(int, {})
 
-    def puncs(self, chunk):
-        return {"&*puncs*&%s" % punc: punc_count/sum(len(sent) for sent in chunk)
-                for punc, punc_count in Counter(token["text"]
-                                                for sent in chunk
-                                                for token in sent
-                                                if token["pos"] == "PUNCT"
-                                                ).items()
-                }
+    def puncs(self, chunk, type_):
+        return defaultdict(int,
+                           {"&*%s_puncs*&%s" % (type_, punc): punc_count/sum(len(sent) for sent in chunk)
+                            for punc, punc_count in Counter(token["text"]
+                                                            for sent in chunk
+                                                            for token in sent
+                                                            if token["pos"] == "PUNCT"
+                                                            ).items()
+                            }
+                           )
 
-    def pronouns(self, chunk):
-        return {"&*prons*&": len([1
-                                  for sent in chunk
-                                  for token in sent
-                                  if token["pos"] == "PRON"
-                                  ])/sum(len(sent) for sent in chunk)}
+    def pronouns(self, chunk, type_):
+        return defaultdict(int,
+                           {"&*%s_prons*&" % type_: len([1
+                                                         for sent in chunk
+                                                         for token in sent
+                                                         if token["pos"] == "PRON"
+                                                         ])/sum(len(sent) for sent in chunk)
+                            }
+                           )
 
-    def mean_dep_tree_depth(self, chunk):
+    def mean_dep_tree_depth(self, chunk, type_):
         def bottom_up(sent, head):
             head = sent[head]
             if head == -1:
@@ -146,14 +177,129 @@ class Direction_classifier:
         for sent in chunk:
             sent = [token["head"] for token in sent]
             depths += max(bottom_up(sent, head) for head in sent)
-        return {"&*mean_dep_tree_depth*&": depths/len(chunk)}
+        return defaultdict(int, {"&*%s_mean_dep_tree_depth*&" % (type_): depths/len(chunk)})
 
-    def update(self):
-        pass
+    def get_mean_xs(self, xs):
+        return defaultdict(int,
+                           {feature: sum(x[feature]
+                                         for x in xs
+                                         if feature in x
+                                         )/len(xs)
+                            for feature in set(feature
+                                               for x in xs
+                                               for feature in x
+                                               )
+                            }
+                           )
 
-    def train(self):
-        pass
+    def get_std_xs(self, xs, mean_xs):
+        n = len(xs) if len(xs) > 1 else 2
+        return defaultdict(int,
+                           {feature: sqrt(sum((x[feature]-mean_xs[feature])**2
+                                              for x in xs
+                                              if feature in x
+                                              )/(n-1)
+                                          )
+                            for feature in set(feature
+                                               for x in xs
+                                               for feature in x
+                                               )
+                            }
+                           )
 
-    def classify(self, chunk):
-        for feature in self.features:
-            print(eval("self.%s" % feature)(chunk))
+    def update_x_norm_params(self, xs):
+        n = len(xs)
+        mean_xs = self.get_mean_xs(xs)
+        std_xs = self.get_std_xs(xs, mean_xs)
+        features = set(feature
+                       for x in xs
+                       for feature in x
+                       ).union(self.x_norm_mean)
+
+        x_norm_mean = defaultdict(int,
+                                  {feature: (self.m*self.x_norm_mean[feature]+n*mean_xs[feature]
+                                             )/(self.m+n)
+                                   for feature in features
+                                   }
+                                  )
+        self.x_norm_std = defaultdict(lambda: 1,
+                                      {feature: sqrt((self.m*(self.x_norm_std[feature]**2+(x_norm_mean[feature]-self.x_norm_mean[feature])**2
+                                                              )+n*(std_xs[feature]**2+(x_norm_mean[feature]-mean_xs[feature])**2)
+                                                      )/(self.m+n-1)
+                                                     )
+                                       for feature in features
+                                       }
+                                      )
+        self.x_norm_mean = x_norm_mean
+        for k, v in self.x_norm_std.items():
+            if v == 0:
+                self.x_norm_std[k] = 1
+
+        self.m += n
+
+    def norm_xs(self, xs):
+        self.update_x_norm_params(xs)
+        return [defaultdict(int,
+                            {feature: (feature_val-self.x_norm_mean[feature])/self.x_norm_std[feature]
+                             for feature, feature_val in x.items()
+                             }
+                            )
+                for x in xs
+                ]
+
+    def get_xs(self, chunks_pair):
+        xs = []
+        for i in range(len(chunks_pair["src"])):
+            xs.append(defaultdict(int))
+            for feature in self.features:
+                for type_ in ["src", "ref"]:
+                    xs[i].update(eval("self.%s" % feature)(chunks_pair[type_][i],
+                                                           type_
+                                                           ))
+        return xs
+
+    def update(self, vec):
+        self.n_updates += 1
+        for k, v in vec.items():
+            self.w[k] += v
+
+    def iterate(self, xs, ys):
+        len_ = len(xs)
+        for i in range(len_):
+            if not self.classify(xs[i]) == ys[i]:
+                self.update(xs[i])
+
+    def learn(self):
+        chunks_src, chunks_ref, chunks_pred = list(zip(*self.train))
+        xs, ys = (self.norm_xs(self.get_xs({"src": chunks_src,
+                                            "ref": chunks_ref
+                                            })),
+                  chunks_pred
+                  )
+        """
+        """
+        for i in range(200):
+            self.iterate(xs, ys)
+        """
+        """
+        print(self.n_updates)
+        """
+        """
+        print(len(self.w))
+        """
+        """
+
+    def classify(self, x):
+        return "reverse" if sum(self.w[k]*v for k, v in x.items() if k in self.w) > 0 else "forward"
+
+    def evaluate(self, chunks_triplets=None):
+        if not chunks_triplets:
+            chunks_triplets = self.dev
+        len_ = len(chunks_triplets)
+        chunks_src, chunks_ref, chunks_pred = list(zip(*chunks_triplets))
+        xs, ys = (self.norm_xs(self.get_xs({"src": chunks_src,
+                                            "ref": chunks_ref
+                                            })),
+                  chunks_pred
+                  )
+        return sum(self.classify(xs[i]) == ys[i] for i in range(len_))/len_

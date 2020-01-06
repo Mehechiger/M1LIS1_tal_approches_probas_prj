@@ -2,6 +2,7 @@ import sys
 import gc
 import json
 import random
+from itertools import combinations
 from c2_Direction_classifier import Direction_classifier
 
 
@@ -107,7 +108,7 @@ input_ = "%s/data/data_parsed.json" % path
 directions = ["reverse", "forward"]
 lang_pairs = ["ru_en", "en_ru", "ro_en", "fi_en", "de_en", "cs_en", "tr_en"]
 types = ["ref", "src"]
-chunk_size = 100
+chunk_size = 300
 train_dev_test_ratio = (3, 1, 1)
 
 # load data from parsed data file
@@ -132,8 +133,28 @@ del data
 gc.collect()
 
 
-dc = Direction_classifier(train, dev)
-for f in ["ttr", "mean_word_rank", "cohesive_markers", "function_words", "puncs", "pronouns", "mean_dep_tree_depth", "pos_2_grams", "pos_2_grams", "chr_3_grams", "chr_3_grams"]:
-    dc.set_features([f, ])
-    dc.classify(test[0][0])
-    print()
+features = ["ttr", "mean_word_rank", "cohesive_markers", "function_words", "puncs", "pronouns",
+            "mean_dep_tree_depth", "pos_2_grams", "pos_3_grams", "chr_2_grams", "chr_3_grams", "positional_token_frequency"]
+features = ["ttr", "puncs", "pronouns", "mean_dep_tree_depth", "pos_2_grams",
+            "pos_3_grams", "chr_2_grams", "chr_3_grams", "positional_token_frequency"]
+"""
+"""
+for i in range(50):
+    data = {direction: shuffle_datapair(direction_dict)
+            for direction, direction_dict in data_orig.items()
+            }
+    data = {direction: chunk_datapair(direction_dict, chunk_size)
+            for direction, direction_dict in data.items()
+            }
+    train, dev, test = make_train_dev_test(data, train_dev_test_ratio)
+    del data
+    gc.collect()
+    dc = Direction_classifier(train, dev)
+    for i in range(1, len(features)):
+        for f_comb in combinations(features, i):
+            dc.set_features(f_comb)
+            dc.learn()
+            acc = dc.evaluate(test)
+            print(acc)
+            print()
+            dc.del_learned()
