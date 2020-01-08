@@ -1,5 +1,6 @@
 from collections import Counter, defaultdict
 from math import log, sqrt
+import numpy as np
 import re
 
 
@@ -113,11 +114,20 @@ class Direction_classifier:
                            )
 
     def positional_token_frequency(self, chunk, type_):
-        positional_tokens = zip(*((sent[0]["lemma"],
-                                   sent[1:2][0]["lemma"],
-                                   sent[-1]["lemma"],
-                                   sent[-2:-1][0]["lemma"],
-                                   sent[-3:-2][0]["lemma"]
+        def get_slice_(l, start, end, key):
+            try:
+                if start == end:
+                    return l[start][key]
+                else:
+                    return l[start:end][0][key]
+            except IndexError:
+                return None
+
+        positional_tokens = zip(*((get_slice_(sent, 0, 0, "lemma"),
+                                   get_slice_(sent, 1, 2, "lemma"),
+                                   get_slice_(sent, -1, -1, "lemma"),
+                                   get_slice_(sent, -2, -1, "lemma"),
+                                   get_slice_(sent, -3, -2, "lemma"),
                                    )
                                   for sent in chunk
                                   ))
@@ -134,7 +144,7 @@ class Direction_classifier:
                            {"&*%s_pos_%s_token_freq*&%s" % (type_, ind, token): pos_token_count/token_counts[token]
                             for ind, pos_token_counts in enumerate(positional_token_counts)
                             for token, pos_token_count in pos_token_counts.items()
-                            if token in token_counts
+                            if token in token_counts and token
                             }
                            )
 
@@ -258,16 +268,16 @@ class Direction_classifier:
                                                            ))
         return xs
 
-    def update(self, vec):
+    def update(self, vec, y):
         self.n_updates += 1
         for k, v in vec.items():
-            self.w[k] += v
+            self.w[k] += v*y
 
     def iterate(self, xs, ys):
         len_ = len(xs)
         for i in range(len_):
-            if not self.classify(xs[i]) == ys[i]:
-                self.update(xs[i])
+            if self.classify(xs[i]) != ys[i]:
+                self.update(xs[i], ys[i])
 
     def learn(self):
         chunks_src, chunks_ref, chunks_pred = list(zip(*self.train))
@@ -276,21 +286,29 @@ class Direction_classifier:
                                             })),
                   chunks_pred
                   )
-        """
-        """
-        for i in range(200):
+
+        last_ones = []
+        while True:
+            print("training..., pass %s" % (len(last_ones)+1),
+                  end="\r"
+                  )
             self.iterate(xs, ys)
-        """
-        """
-        print(self.n_updates)
-        """
-        """
-        print(len(self.w))
-        """
-        """
+            print("training..., pass %s - done" % (len(last_ones)+1))
+            print("evaluating on dev..., pass %s - " % len(last_ones),
+                  end="\r"
+                  )
+            last_ones.append((self.evaluate(), self.w.copy()))
+            print("evaluating on dev..., pass %s - done. accuracy %s%%" %
+                  (len(last_ones), last_ones[-1][0]*100))
+            if len(last_ones) >= 6 and min(ones[0] for ones in last_ones[-6:-4]
+                                           ) >= max(ones[0] for ones in last_ones[-3:-1]):
+                self.w = last_ones[np.argmax([ones[0]
+                                              for ones in last_ones
+                                              ])][1].copy()
+                break
 
     def classify(self, x):
-        return "reverse" if sum(self.w[k]*v for k, v in x.items() if k in self.w) > 0 else "forward"
+        return 1 if sum(self.w[k]*v for k, v in x.items() if k in self.w) >= 0 else -1
 
     def evaluate(self, chunks_triplets=None):
         if not chunks_triplets:
