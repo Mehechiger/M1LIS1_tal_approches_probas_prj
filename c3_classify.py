@@ -1,7 +1,9 @@
 import sys
 import gc
+import os
 import json
 import random
+import pandas as pd
 from itertools import combinations
 from c2_Direction_classifier import Direction_classifier
 
@@ -104,11 +106,11 @@ if path[-8:] != "/scripts":
 path = path[:-7]
 
 input_ = "%s/data/data_parsed.json" % path
+output = "%s/data/" % path
 
 directions = {"reverse": -1, "forward": 1}
 lang_pairs = ["ru_en", "en_ru", "ro_en", "fi_en", "de_en", "cs_en", "tr_en"]
 types = ["ref", "src"]
-chunk_size = 300
 train_dev_test_ratio = (3, 1, 1)
 
 # load data from parsed data file
@@ -119,37 +121,63 @@ data_orig = load_direction_level(input_)
 features = ["ttr", "puncs", "pronouns", "mean_dep_tree_depth", "pos_2_grams",
             "pos_3_grams", "chr_2_grams", "chr_3_grams", "positional_token_frequency"]
 
-for i in range(1, len(features)):
-    for features_comb in combinations(features, i):
-        for chunk_size_coeff in range(40):
-            chunk_size = 50*chunk_size_coeff
-            for repeat in range(1):
+dc = Direction_classifier()
+res = pd.DataFrame(columns=["accuracy",
+                            "n_vec_dim",
+                            "n_updates",
+                            "feature",
+                            "chunk_size",
+                            "train_size",
+                            "dev_size",
+                            "test_size"
+                            ])
+
+for chunk_size_coeff in range(40):
+    chunk_size = 50*chunk_size_coeff
+    for repeat in range(3):
                 # shuffle data
-                data = {direction: shuffle_datapair(direction_dict)
-                        for direction, direction_dict in data_orig.items()
-                        }
+        data = {direction: shuffle_datapair(direction_dict)
+                for direction, direction_dict in data_orig.items()
+                }
 
-                # chunk data
-                data = {direction: chunk_datapair(direction_dict, chunk_size)
-                        for direction, direction_dict in data.items()
-                        }
+        # chunk data
+        data = {direction: chunk_datapair(direction_dict, chunk_size)
+                for direction, direction_dict in data.items()
+                }
 
-                # make train, dev and test
-                train, dev, test = make_train_dev_test(data,
-                                                       train_dev_test_ratio,
-                                                       directions
-                                                       )
-                print(len(train), len(dev), len(test))
+        # make train, dev and test
+        train, dev, test = make_train_dev_test(data,
+                                               train_dev_test_ratio,
+                                               directions
+                                               )
+        print(len(train), len(dev), len(test))
 
-                # regain RAM
-                del data
-                gc.collect()
+        # regain RAM
+        del data
+        gc.collect()
 
-                dc = Direction_classifier(train, dev)
+        if os.path.isdir("%stest_dc.json" % output):
+            res = pd.read_json("%stest_dc.json" % output)
 
+        dc.set_datasets(train, dev)
+
+        # for i in range(1, len(features)):
+        for i in range(1, 2):
+            for features_comb in combinations(features, i):
                 dc.set_features(features_comb)
+                dc.del_learned()
                 dc.learn()
                 acc = dc.evaluate(test)
                 print(acc)
                 print()
-                dc.del_learned()
+                res.loc[res.shape[0]+1] = pd.Series({"accuracy": acc,
+                                                     "n_vec_dim": len(dc.get_w()),
+                                                     "n_updates": dc.get_n_updates(),
+                                                     "feature": "/".join(features_comb),
+                                                     "chunk_size": chunk_size,
+                                                     "train_size": len(train),
+                                                     "dev_size": len(dev),
+                                                     "test_size": len(test)
+                                                     })
+
+        res.to_json("%stest_dc.json" % output)

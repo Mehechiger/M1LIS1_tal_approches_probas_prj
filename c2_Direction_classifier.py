@@ -5,7 +5,7 @@ import re
 
 
 class Direction_classifier:
-    def __init__(self, train, dev):
+    def __init__(self, train=None, dev=None, features=None):
         self.train, self.dev = train, dev
         self.ngram_features = ["pos", "chr"]
         self._features = {"ttr",
@@ -21,7 +21,7 @@ class Direction_classifier:
                           "pronouns",
                           "mean_dep_tree_depth"
                           }
-        self.set_features()
+        self.set_features(features)
         self.w = defaultdict(int)
         self.x_norm_mean = defaultdict(lambda: 0)
         self.x_norm_std = defaultdict(lambda: 1)
@@ -34,6 +34,9 @@ class Direction_classifier:
         self.x_norm_std = defaultdict(lambda: 1)
         self.m = 0
         self.n_updates = 0
+
+    def set_datasets(self, train, dev):
+        self.train, self.dev = train, dev
 
     def set_features(self, features=None):
         if not features:
@@ -69,6 +72,12 @@ class Direction_classifier:
         if not self.features:
             print("must use some features!")
             exit()
+
+    def get_w(self):
+        return self.w.copy()
+
+    def get_n_updates(self):
+        return self.n_updates
 
     def ttr(self, chunk, type_):
         poss = Counter(token["pos"] for sent in chunk for token in sent)
@@ -280,6 +289,10 @@ class Direction_classifier:
                 self.update(xs[i], ys[i])
 
     def learn(self):
+        if not self.train or not self.dev:
+            print("cannot learn without datasets!")
+            exit()
+
         chunks_src, chunks_ref, chunks_pred = list(zip(*self.train))
         xs, ys = (self.norm_xs(self.get_xs({"src": chunks_src,
                                             "ref": chunks_ref
