@@ -23,14 +23,8 @@ def load_direction_level(input_):
 
 def load_langpair_level(input_):
     """
-    ???
     """
-    with open(input_, "r") as f:
-        return {lang_pair: {direction: direction_dict[lang_pair]
-                            for direction, direction_dict in json.load(f).items()
-                            }
-                for lang_pair in lang_pairs
-                }
+    pass
 
 
 def shuffle_datapair(datapair):
@@ -134,8 +128,9 @@ res = pd.DataFrame(columns=["accuracy",
 
 for chunk_size_coeff in range(40):
     chunk_size = 50*chunk_size_coeff
+
     for repeat in range(3):
-                # shuffle data
+        # shuffle data
         data = {direction: shuffle_datapair(direction_dict)
                 for direction, direction_dict in data_orig.items()
                 }
@@ -173,6 +168,8 @@ for chunk_size_coeff in range(40):
                 res.loc[res.shape[0]+1] = pd.Series({"accuracy": acc,
                                                      "n_vec_dim": len(dc.get_w()),
                                                      "n_updates": dc.get_n_updates(),
+                                                     "n_passes": dc.get_n_passes(),
+                                                     "n_passes_argmax": dc.get_n_passes_argmax(),
                                                      "feature": "/".join(features_comb),
                                                      "chunk_size": chunk_size,
                                                      "train_size": len(train),

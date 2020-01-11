@@ -27,6 +27,8 @@ class Direction_classifier:
         self.x_norm_std = defaultdict(lambda: 1)
         self.m = 0
         self.n_updates = 0
+        self.n_passes = 0
+        self.n_passes_argmax = 0
 
     def del_learned(self):
         self.w = defaultdict(int)
@@ -34,6 +36,8 @@ class Direction_classifier:
         self.x_norm_std = defaultdict(lambda: 1)
         self.m = 0
         self.n_updates = 0
+        self.n_passes = 0
+        self.n_passes_argmax = 0
 
     def set_datasets(self, train, dev):
         self.train, self.dev = train, dev
@@ -78,6 +82,12 @@ class Direction_classifier:
 
     def get_n_updates(self):
         return self.n_updates
+
+    def get_n_passes(self):
+        return self.n_passes
+
+    def get_n_passes_argmax(self):
+        return self.n_passes_argmax
 
     def ttr(self, chunk, type_):
         poss = Counter(token["pos"] for sent in chunk for token in sent)
@@ -313,11 +323,14 @@ class Direction_classifier:
             last_ones.append((self.evaluate(), self.w.copy()))
             print("evaluating on dev..., pass %s - done. accuracy %s%%" %
                   (len(last_ones), last_ones[-1][0]*100))
-            if len(last_ones) >= 6 and min(ones[0] for ones in last_ones[-6:-4]
-                                           ) >= max(ones[0] for ones in last_ones[-3:-1]):
-                self.w = last_ones[np.argmax([ones[0]
-                                              for ones in last_ones
-                                              ])][1].copy()
+            # if len(last_ones) >= 6 and min(ones[0] for ones in last_ones[-6:-4]) >= max(ones[0] for ones in last_ones[-3:-1]):
+            if len(last_ones) >= 20 and np.mean([ones[0] for ones in last_ones[-9:-1]]) <= np.mean([ones[0] for ones in last_ones[-20:-10]]):
+                self.n_passes = len(last_ones)
+                n_passes_argmax = np.argmax([ones[0]
+                                             for ones in last_ones
+                                             ])
+                self.w = last_ones[n_passes_argmax][1].copy()
+                self.n_passes_argmax = n_passes_argmax+1
                 break
 
     def classify(self, x):
