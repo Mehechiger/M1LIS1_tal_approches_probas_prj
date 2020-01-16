@@ -22,22 +22,22 @@ class Direction_classifier:
                           "mean_dep_tree_depth"
                           }
         self.set_features(features)
-        self.w = defaultdict(lambda: defaultdict(int))
+        self.w = defaultdict(int)
         self.dims = defaultdict(set)
         self.x_norm_mean = defaultdict(lambda: defaultdict(lambda: 0))
         self.x_norm_std = defaultdict(lambda: defaultdict(lambda: 1))
         self.xys_dev = None
-        self.m = defaultdict(int)
+        self.m = 0
         self.n_updates = 0
         self.n_passes = 0
         self.n_passes_argmax = 0
 
     def del_learned(self, del_xys_dev=False):
-        self.w = defaultdict(lambda: defaultdict(int))
+        self.w = defaultdict(int)
         self.dims = defaultdict(set)
         self.x_norm_mean = defaultdict(lambda: defaultdict(lambda: 0))
         self.x_norm_std = defaultdict(lambda: defaultdict(lambda: 1))
-        self.m = defaultdict(int)
+        self.m = 0
         self.n_updates = 0
         self.n_passes = 0
         self.n_passes_argmax = 0
@@ -213,6 +213,21 @@ class Direction_classifier:
             depths += max(bottom_up(sent, head) for head in sent)
         return defaultdict(int, {"&*%s_mean_dep_tree_depth*&" % (type_): depths/len(chunk)})
 
+    """
+    def get_mean_xs(self, xs):
+        return defaultdict(int,
+                           {feature: sum(x[feature]
+                                         for x in xs
+                                         if feature in x
+                                         )/len(xs)
+                            for feature in set(feature
+                                               for x in xs
+                                               for feature in x
+                                               )
+                            }
+                           )
+    """
+
     def get_mean_xs(self, xs, ns):
         res = defaultdict(lambda: defaultdict(int))
         for feature in self.features:
@@ -226,6 +241,23 @@ class Direction_classifier:
                                         }
                                        )
         return res
+
+    """
+    def get_std_xs(self, xs, mean_xs):
+        n = len(xs) if len(xs) > 1 else 2
+        return defaultdict(int,
+                           {feature: sqrt(sum((x[feature]-mean_xs[feature])**2
+                                              for x in xs
+                                              if feature in x
+                                              )/(n-1)
+                                          )
+                            for feature in set(feature
+                                               for x in xs
+                                               for feature in x
+                                               )
+                            }
+                           )
+    """
 
     def get_std_xs(self, xs, ns, mean_xs):
         res = defaultdict(lambda: defaultdict(lambda: 1))
@@ -241,6 +273,82 @@ class Direction_classifier:
                                         }
                                        )
         return res
+
+    """
+    def update_x_norm_params(self, xs):
+        n = len(xs)
+        mean_xs = self.get_mean_xs(xs)
+        std_xs = self.get_std_xs(xs, mean_xs)
+        features = set(feature
+                       for x in xs
+                       for feature in x
+                       ).union(self.x_norm_mean)
+
+        x_norm_mean = defaultdict(int,
+                                  {feature: (self.m*self.x_norm_mean[feature]+n*mean_xs[feature]
+                                             )/(self.m+n)
+                                   for feature in features
+                                   }
+                                  )
+        self.x_norm_std = defaultdict(lambda: 1,
+                                      {feature: sqrt((self.m*(self.x_norm_std[feature]**2+(x_norm_mean[feature]-self.x_norm_mean[feature])**2
+                                                              )+n*(std_xs[feature]**2+(x_norm_mean[feature]-mean_xs[feature])**2)
+                                                      )/(self.m+n-1)
+                                                     )
+                                       for feature in features
+                                       }
+                                      )
+        self.x_norm_mean = x_norm_mean
+        for k, v in self.x_norm_std.items():
+            if v == 0:
+                self.x_norm_std[k] = 1
+
+        self.m += n
+
+    def update_x_norm_params(self, xs):
+        def zero_to_one(num):
+            return num if num else 1
+
+        n = len(xs)
+        mean_xs = self.get_mean_xs(xs)
+        std_xs = self.get_std_xs(xs, mean_xs)
+        features = {feature: set(dim
+                                 for x in xs
+                                 for dim in x[feature]
+                                 ).union(self.x_norm_mean[feature])
+                    for feature in self.features
+                    }
+
+        x_norm_mean = defaultdict(lambda: defaultdict(int),
+                                  {feature: defaultdict(int,
+                                                        {dim: (self.m*self.x_norm_mean[feature][dim]+n*mean_xs[feature][dim]
+                                                               )/(self.m+n)
+                                                         for dim in feature_set
+                                                         }
+                                                        )
+                                   for feature, feature_set in features.items()
+                                   }
+                                  )
+
+        self.x_norm_std = defaultdict(lambda: defaultdict(lambda: 1),
+                                      {feature: defaultdict(lambda: 1,
+                                                            {dim: zero_to_one(sqrt((self.m*(self.x_norm_std[feature][dim]**2+(x_norm_mean[feature][dim]-self.x_norm_mean[feature][dim])**2)+n*(std_xs[feature][dim]**2+(x_norm_mean[feature][dim]-mean_xs[feature][dim])**2))/(self.m+n-1)))
+                                                             for dim in feature_set
+                                                             }
+                                                            )
+                                       for feature, feature_set in features.items()
+                                       }
+                                      )
+        self.x_norm_mean = x_norm_mean
+        '''
+        for feature, feature_dict in self.x_norm_std.items():
+            for dim, dim_val in feature_dict.items():
+                if dim_val == 0:
+                    self.x_norm_std[feature][dim] = 1
+        '''
+
+        self.m += n
+    """
 
     def update_x_norm_params(self, xs):
         def update_mean(m, n, mean_m, mean_n):
@@ -271,8 +379,8 @@ class Direction_classifier:
         x_norm_mean = defaultdict(lambda: defaultdict(int))
         for feature, feature_set in self.dims.items():
             for dim in feature_set:
-                val = update_mean(self.m[feature],
-                                  ns[feature],
+                val = update_mean(self.m,
+                                  n,
                                   self.x_norm_mean[feature][dim],
                                   mean_xs[feature][dim]
                                   )
@@ -281,8 +389,8 @@ class Direction_classifier:
         self.x_norm_std = defaultdict(lambda: defaultdict(lambda: 1))
         for feature, feature_set in self.dims.items():
             for dim in feature_set:
-                val = update_std(self.m[feature],
-                                 ns[feature],
+                val = update_std(self.m,
+                                 n,
                                  self.x_norm_std[feature][dim],
                                  std_xs[feature][dim],
                                  self.x_norm_mean[feature][dim],
@@ -296,6 +404,32 @@ class Direction_classifier:
         for feature in self.m:
             self.m[feature] += ns[feature]
 
+    """
+    def norm_xs(self, xs):
+        self.update_x_norm_params(xs)
+        return [defaultdict(int,
+                            {feature: (feature_val-self.x_norm_mean[feature])/self.x_norm_std[feature]
+                             for feature, feature_val in x.items()
+                             }
+                            )
+                for x in xs
+                ]
+
+    def norm_xs(self, xs):
+        self.update_x_norm_params(xs)
+        return [defaultdict(lambda:defaultdict(int),
+                            {feature: defaultdict(int,
+                                                  {dim: (dim_val-self.x_norm_mean[feature][dim])/self.x_norm_std[feature][dim]
+                                                   for dim, dim_val in feature_dict.items()
+                                                   }
+                                                  )
+                             for feature, feature_dict in x.items()
+                             }
+                            )
+                for x in xs
+                ]
+    """
+
     def norm_xs(self, xs):
         self.update_x_norm_params(xs)
         for i in range(len(xs)):
@@ -304,6 +438,19 @@ class Direction_classifier:
                     xs[i][feature][dim] = (dim_val-self.x_norm_mean[feature][dim]
                                            )/self.x_norm_std[feature][dim]
         return xs
+
+    """
+    def get_xs(self, chunks_pair):
+        xs = []
+        for i in range(len(chunks_pair["src"])):
+            xs.append(defaultdict(int))
+            for feature in self.features:
+                for type_ in ["src", "ref"]:
+                    xs[i].update(eval("self.%s" % feature)(chunks_pair[type_][i],
+                                                           type_
+                                                           ))
+        return xs
+    """
 
     def get_xs(self, chunks_pair):
         xs = []
@@ -318,9 +465,8 @@ class Direction_classifier:
 
     def update(self, vec, y):
         self.n_updates += 1
-        for feature, feature_dict in vec.items():
-            for dim, dim_val in feature_dict.items():
-                self.w[feature][dim] += dim_val*y
+        for k, v in vec.items():
+            self.w[k] += v*y
 
     def iterate(self, xs, ys):
         len_ = len(xs)
@@ -363,10 +509,7 @@ class Direction_classifier:
         self.n_passes_argmax = n_passes_argmax+1
 
     def classify(self, x):
-        return 1 if sum(self.w[feature][dim]*dim_val
-                        for feature, feature_dict in x.items()
-                        for dim, dim_val in feature_dict.items()
-                        ) >= 0 else -1
+        return 1 if sum(self.w[k]*v for k, v in x.items() if k in self.w) >= 0 else -1
 
     def evaluate(self, chunks_triplets=None):
         if self.xys_dev:

@@ -183,7 +183,8 @@ for chunk_size_coeff in range(40):
 
         # for i in range(1, len(features)):
         for i in range(1, 2):
-            for features_comb in combinations(features, i):
+            # for features_comb in combinations(features, i):
+            for features_comb in [features, ]:
                 dc.set_features(features_comb)
                 dc.del_learned()
                 dc.learn()
