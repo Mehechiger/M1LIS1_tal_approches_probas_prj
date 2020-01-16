@@ -21,10 +21,18 @@ def load_direction_level(input_):
                 }
 
 
-def load_langpair_level(input_):
-    """
-    """
-    pass
+def load_langpair(input_, lang_pairs):
+    with open(input_, "r") as f:
+        data = json.load(f)
+        return {direction: {type_: [sent
+                                    for lang_pair, langpair_dict in data[direction].items()
+                                    for sent in langpair_dict[type_]
+                                    if lang_pair in lang_pairs
+                                    ]
+                            for type_ in types
+                            }
+                for direction in directions
+                }
 
 
 def shuffle_datapair(datapair):
@@ -109,6 +117,14 @@ train_dev_test_ratio = (3, 1, 1)
 
 # load data from parsed data file
 data_orig = load_direction_level(input_)
+"""
+data_orig = load_langpair(input_, ["en_ru", "ru_en"])
+l = len(data_orig["reverse"]["src"])
+data_orig["forward"]["src"] = data_orig["forward"]["src"][:l]
+data_orig["forward"]["ref"] = data_orig["forward"]["ref"][:l]
+"""
+"""
+"""
 
 
 #features = ["ttr", "mean_word_rank", "cohesive_markers", "function_words", "puncs", "pronouns", "mean_dep_tree_depth", "pos_2_grams", "pos_3_grams", "chr_2_grams", "chr_3_grams", "positional_token_frequency"]
@@ -116,20 +132,11 @@ features = ["ttr", "puncs", "pronouns", "mean_dep_tree_depth", "pos_2_grams",
             "pos_3_grams", "chr_2_grams", "chr_3_grams", "positional_token_frequency"]
 
 dc = Direction_classifier()
-res = pd.DataFrame(columns=["accuracy",
-                            "n_vec_dim",
-                            "n_updates",
-                            "feature",
-                            "chunk_size",
-                            "train_size",
-                            "dev_size",
-                            "test_size"
-                            ])
 
 for chunk_size_coeff in range(40):
     chunk_size = 50*chunk_size_coeff
 
-    for repeat in range(3):
+    for repeat in range(50):
         # shuffle data
         data = {direction: shuffle_datapair(direction_dict)
                 for direction, direction_dict in data_orig.items()
@@ -151,8 +158,26 @@ for chunk_size_coeff in range(40):
         del data
         gc.collect()
 
-        if os.path.isdir("%stest_dc.json" % output):
+        if os.path.exists("%stest_dc.json" % output):
             res = pd.read_json("%stest_dc.json" % output)
+            shuffle = res.shuffle.max()
+        else:
+            res = pd.DataFrame(columns=["accuracy",
+                                        "n_vec_dim",
+                                        "n_updates",
+                                        "n_passes",
+                                        "n_passes_argmax",
+                                        "feature",
+                                        "chunk_size",
+                                        "train_size",
+                                        "dev_size",
+                                        "test_size",
+                                        "shuffle"
+                                        ])
+            shuffle = 0
+
+        shuffle += 1
+        dc.del_learned(True)
 
         dc.set_datasets(train, dev)
 
@@ -174,7 +199,8 @@ for chunk_size_coeff in range(40):
                                                      "chunk_size": chunk_size,
                                                      "train_size": len(train),
                                                      "dev_size": len(dev),
-                                                     "test_size": len(test)
+                                                     "test_size": len(test),
+                                                     "shuffle": shuffle
                                                      })
 
         res.to_json("%stest_dc.json" % output)

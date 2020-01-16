@@ -25,12 +25,13 @@ class Direction_classifier:
         self.w = defaultdict(int)
         self.x_norm_mean = defaultdict(lambda: 0)
         self.x_norm_std = defaultdict(lambda: 1)
+        self.xys_dev = None
         self.m = 0
         self.n_updates = 0
         self.n_passes = 0
         self.n_passes_argmax = 0
 
-    def del_learned(self):
+    def del_learned(self, del_xys_dev=False):
         self.w = defaultdict(int)
         self.x_norm_mean = defaultdict(lambda: 0)
         self.x_norm_std = defaultdict(lambda: 1)
@@ -38,6 +39,8 @@ class Direction_classifier:
         self.n_updates = 0
         self.n_passes = 0
         self.n_passes_argmax = 0
+        if del_xys_dev:
+            self.xys_dev = None
 
     def set_datasets(self, train, dev):
         self.train, self.dev = train, dev
@@ -311,7 +314,7 @@ class Direction_classifier:
                   )
 
         last_ones = []
-        while True:
+        for i in range(500):
             print("training..., pass %s" % (len(last_ones)+1),
                   end="\r"
                   )
@@ -323,27 +326,32 @@ class Direction_classifier:
             last_ones.append((self.evaluate(), self.w.copy()))
             print("evaluating on dev..., pass %s - done. accuracy %s%%" %
                   (len(last_ones), last_ones[-1][0]*100))
-            # if len(last_ones) >= 6 and min(ones[0] for ones in last_ones[-6:-4]) >= max(ones[0] for ones in last_ones[-3:-1]):
-            if len(last_ones) >= 20 and np.mean([ones[0] for ones in last_ones[-9:-1]]) <= np.mean([ones[0] for ones in last_ones[-20:-10]]):
-                self.n_passes = len(last_ones)
-                n_passes_argmax = np.argmax([ones[0]
-                                             for ones in last_ones
-                                             ])
-                self.w = last_ones[n_passes_argmax][1].copy()
-                self.n_passes_argmax = n_passes_argmax+1
+            if len(last_ones) >= 20 and min(ones[0] for ones in last_ones[-20:-5]) >= max(ones[0] for ones in last_ones[-4:-1]):
                 break
+        n_passes_argmax = np.argmax([ones[0]
+                                     for ones in last_ones
+                                     ])
+        self.w = last_ones[n_passes_argmax][1].copy()
+        self.n_passes = len(last_ones)
+        self.n_passes_argmax = n_passes_argmax+1
 
     def classify(self, x):
         return 1 if sum(self.w[k]*v for k, v in x.items() if k in self.w) >= 0 else -1
 
     def evaluate(self, chunks_triplets=None):
-        if not chunks_triplets:
-            chunks_triplets = self.dev
-        len_ = len(chunks_triplets)
-        chunks_src, chunks_ref, chunks_pred = list(zip(*chunks_triplets))
-        xs, ys = (self.norm_xs(self.get_xs({"src": chunks_src,
-                                            "ref": chunks_ref
-                                            })),
-                  chunks_pred
-                  )
+        if self.xys_dev:
+            xs, ys, len_ = self.xys_dev
+        else:
+            if not chunks_triplets:
+                chunks_triplets = self.dev
+                first = True
+            len_ = len(chunks_triplets)
+            chunks_src, chunks_ref, chunks_pred = list(zip(*chunks_triplets))
+            xs, ys = (self.norm_xs(self.get_xs({"src": chunks_src,
+                                                "ref": chunks_ref
+                                                })),
+                      chunks_pred
+                      )
+            if first:
+                self.xys_dev = (xs, ys, len_)
         return sum(self.classify(xs[i]) == ys[i] for i in range(len_))/len_
