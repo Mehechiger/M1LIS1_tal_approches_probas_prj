@@ -12,7 +12,7 @@ if path[-8:] != "/scripts":
     exit()
 path = path[:-7]
 
-input_ = "%sdata/test_dc_all_200x.json" % path
+input_ = "%sdata/test_dc_V17_all+one_50x.json" % path
 output = "%sanalysis/" % path
 output_plots = "%splots/" % path
 
@@ -26,7 +26,7 @@ data = pd.read_json(input_)
 
 plot = sns.relplot(x='chunk_size', y='accuracy',
                    hue='feature', kind='line', data=data)
-plot.savefig("%sfeatures_acc.jpg" % output_plots)
+plot.savefig("%srel.jpg" % output_plots)
 
 
 res = pd.DataFrame(columns=["feature",
